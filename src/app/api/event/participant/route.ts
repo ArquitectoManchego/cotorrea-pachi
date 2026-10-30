@@ -8,9 +8,10 @@ export async function POST(req: NextRequest) {
     if (!body.nombre || !body.apellido) {
       return NextResponse.json({ error: 'Nombre y apellido son obligatorios' }, { status: 400 });
     }
-    const updated = saveParticipant(body);
+    const updated = await saveParticipant(body);
     return NextResponse.json(updated);
   } catch (error) {
+    console.error('Error saving participant:', error);
     return NextResponse.json({ error: 'Error procesando solicitud' }, { status: 500 });
   }
 }

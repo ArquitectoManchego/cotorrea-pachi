@@ -1,9 +1,10 @@
 import { EventData, Participant, PlaceOption } from '@/types';
+import { fetchEventFromCloud, saveEventToCloud } from './cloudDb';
 
 const INITIAL_EVENT: EventData = {
   id: 'cotorreo-amigos',
   titulo: '🍻 Quedada de Fin de Semana con la Banda',
-  descripcion: '¡Vamos a ponernos de acuerdo para vernos! Selecciona qué días puedes, tus horarios y propón lugares chingones.',
+  descripcion: '¡Vamos a ponernos de acuerdo para vernos! Selecciona qué días puedes, tus horarios y propón lugares en el mapa o por nombre.',
   organizador: 'Alex Manchego',
   createdAt: new Date().toISOString(),
   participantes: [
@@ -122,29 +123,64 @@ const INITIAL_EVENT: EventData = {
   ],
 };
 
-// Global in-memory instance (survives requests during warm serverless / node server)
 let globalEventData: EventData = JSON.parse(JSON.stringify(INITIAL_EVENT));
+let hasLoadedFromCloud = false;
 
-export function getEventData(): EventData {
+export async function getEventData(): Promise<EventData> {
+  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
+  if (cloudEvent) {
+    globalEventData = cloudEvent;
+    hasLoadedFromCloud = true;
+    return globalEventData;
+  }
+
+  // If this is the first run on an empty cloud database, seed with initial demo
+  if (!hasLoadedFromCloud) {
+    await saveEventToCloud(globalEventData);
+    hasLoadedFromCloud = true;
+  }
+
   return globalEventData;
 }
 
-export function saveParticipant(participant: Participant): EventData {
+export async function saveParticipant(participant: Participant): Promise<EventData> {
+  // Sync latest from cloud first
+  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
+  if (cloudEvent) {
+    globalEventData = cloudEvent;
+  }
+
   const existingIdx = globalEventData.participantes.findIndex((p) => p.id === participant.id);
   if (existingIdx >= 0) {
     globalEventData.participantes[existingIdx] = participant;
   } else {
     globalEventData.participantes.push(participant);
   }
+
+  // Persist to cloud database
+  await saveEventToCloud(globalEventData);
   return globalEventData;
 }
 
-export function addPlaceOption(place: PlaceOption): EventData {
+export async function addPlaceOption(place: PlaceOption): Promise<EventData> {
+  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
+  if (cloudEvent) {
+    globalEventData = cloudEvent;
+  }
+
   globalEventData.lugaresPropuestos.unshift(place);
+
+  // Persist to cloud database
+  await saveEventToCloud(globalEventData);
   return globalEventData;
 }
 
-export function toggleVotePlace(placeId: string, participantId: string): EventData {
+export async function toggleVotePlace(placeId: string, participantId: string): Promise<EventData> {
+  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
+  if (cloudEvent) {
+    globalEventData = cloudEvent;
+  }
+
   const place = globalEventData.lugaresPropuestos.find((p) => p.id === placeId);
   if (place) {
     const hasVoted = place.votos.includes(participantId);
@@ -154,10 +190,14 @@ export function toggleVotePlace(placeId: string, participantId: string): EventDa
       place.votos.push(participantId);
     }
   }
+
+  // Persist to cloud database
+  await saveEventToCloud(globalEventData);
   return globalEventData;
 }
 
-export function resetToDemo(): EventData {
+export async function resetToDemo(): Promise<EventData> {
   globalEventData = JSON.parse(JSON.stringify(INITIAL_EVENT));
+  await saveEventToCloud(globalEventData);
   return globalEventData;
 }

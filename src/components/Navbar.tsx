@@ -2,13 +2,19 @@
 
 import React, { useState } from 'react';
 import { Participant } from '@/types';
-import { Beer, Share2, UserPlus, Check, RotateCcw } from 'lucide-react';
+import { Beer, Share2, UserPlus, Check, RotateCcw, Database } from 'lucide-react';
 
 interface NavbarProps {
   currentParticipant: Participant | null;
   onOpenRegister: () => void;
   onResetDemo: () => void;
   totalParticipants: number;
+  dbStatus?: {
+    provider: string;
+    isConfigured: boolean;
+    name: string;
+  };
+  onOpenDbModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,6 +22,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenRegister,
   onResetDemo,
   totalParticipants,
+  dbStatus,
+  onOpenDbModal,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -60,6 +68,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Cloud DB Status indicator button */}
+          {onOpenDbModal && (
+            <button
+              onClick={onOpenDbModal}
+              title={dbStatus?.isConfigured ? 'Base de datos en la nube activa' : 'Configurar base de datos gratuita en la nube'}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition ${
+                dbStatus?.isConfigured
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  dbStatus?.isConfigured ? 'bg-emerald-500' : 'bg-amber-400'
+                }`}
+              />
+              <Database className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">
+                {dbStatus?.isConfigured ? 'Nube Conectada' : 'BD en Nube'}
+              </span>
+            </button>
+          )}
+
           <button
             onClick={onResetDemo}
             title="Reiniciar con datos de prueba"
@@ -80,7 +111,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <>
                 <Share2 className="w-4 h-4 text-slate-500" />
-                <span>Invitar amigos</span>
+                <span className="hidden sm:inline">Invitar amigos</span>
               </>
             )}
           </button>
@@ -106,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-medium transition shadow-sm shadow-teal-600/20"
             >
               <UserPlus className="w-4 h-4" />
-              <span>Unirme al plan</span>
+              <span>Unirme</span>
             </button>
           )}
         </div>

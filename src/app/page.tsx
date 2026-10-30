@@ -10,6 +10,7 @@ import { GoogleMapView } from '@/components/GoogleMapView';
 import { GooglePlaceSearchBar } from '@/components/GooglePlaceSearchBar';
 import { RegisterModal } from '@/components/RegisterModal';
 import { ProposePlaceModal } from '@/components/ProposePlaceModal';
+import { DatabaseStatusModal } from '@/components/DatabaseStatusModal';
 import {
   MapPin,
   CalendarDays,
@@ -20,11 +21,23 @@ import {
   Compass,
 } from 'lucide-react';
 
+interface DbStatus {
+  provider: string;
+  isConfigured: boolean;
+  name: string;
+}
+
 export default function HomePage() {
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [currentParticipant, setCurrentParticipant] = useState<Participant | null>(null);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isProposeOpen, setIsProposeOpen] = useState(false);
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [dbStatus, setDbStatus] = useState<DbStatus>({
+    provider: 'memory',
+    isConfigured: false,
+    name: 'Cargando estado de base de datos...',
+  });
   const [activeTab, setActiveTab] = useState<'map' | 'schedule'>('map');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,9 +45,13 @@ export default function HomePage() {
   // Load event data from server
   const fetchEvent = async () => {
     try {
-      const res = await fetch('/api/event');
-      if (res.ok) {
-        const data: EventData = await res.json();
+      const [eventRes, dbRes] = await Promise.all([
+        fetch('/api/event'),
+        fetch('/api/db/status'),
+      ]);
+
+      if (eventRes.ok) {
+        const data: EventData = await eventRes.json();
         setEventData(data);
 
         // Check local storage for current participant
@@ -45,6 +62,11 @@ export default function HomePage() {
             setCurrentParticipant(found);
           }
         }
+      }
+
+      if (dbRes.ok) {
+        const dbData: DbStatus = await dbRes.json();
+        setDbStatus(dbData);
       }
     } catch (err) {
       console.error('Error fetching event data:', err);
@@ -133,7 +155,7 @@ export default function HomePage() {
         <div className="w-12 h-12 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-md animate-pulse">
           <Sparkles className="w-6 h-6 animate-spin" />
         </div>
-        <p className="text-sm font-semibold text-slate-600 mt-4">Cargando Cotorrea Pachi con Google Maps...</p>
+        <p className="text-sm font-semibold text-slate-600 mt-4">Cargando Cotorrea Pachi con Base de Datos en Nube...</p>
       </div>
     );
   }
@@ -146,6 +168,8 @@ export default function HomePage() {
         onOpenRegister={() => setIsRegisterOpen(true)}
         onResetDemo={handleResetDemo}
         totalParticipants={eventData.participantes.length}
+        dbStatus={dbStatus}
+        onOpenDbModal={() => setIsDbModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -275,9 +299,15 @@ export default function HomePage() {
       <footer className="mt-12 bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
-            🍻 <strong>Cotorrea Pachi</strong> &copy; 2026. Con Google Maps integrado para llegar sin perderse.
+            🍻 <strong>Cotorrea Pachi</strong> &copy; 2026. Con Google Maps y Base de Datos en la Nube.
           </p>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsDbModalOpen(true)}
+              className="text-slate-600 hover:text-emerald-700 font-medium underline flex items-center gap-1"
+            >
+              <span>Estado BD ({dbStatus.isConfigured ? 'Conectada' : 'Configurar'})</span>
+            </button>
             <a
               href="https://github.com/ArquitectoManchego/cotorrea-pachi"
               target="_blank"
@@ -315,6 +345,12 @@ export default function HomePage() {
           setIsProposeOpen(false);
           setIsRegisterOpen(true);
         }}
+      />
+
+      <DatabaseStatusModal
+        isOpen={isDbModalOpen}
+        onClose={() => setIsDbModalOpen(false)}
+        dbStatus={dbStatus}
       />
     </div>
   );

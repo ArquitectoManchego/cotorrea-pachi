@@ -8,9 +8,10 @@ export async function POST(req: NextRequest) {
     if (!body.nombre) {
       return NextResponse.json({ error: 'El nombre del lugar es obligatorio' }, { status: 400 });
     }
-    const updated = addPlaceOption(body);
+    const updated = await addPlaceOption(body);
     return NextResponse.json(updated);
   } catch (error) {
+    console.error('Error adding place:', error);
     return NextResponse.json({ error: 'Error procesando solicitud' }, { status: 500 });
   }
 }
