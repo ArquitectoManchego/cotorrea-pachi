@@ -40,7 +40,7 @@ export function getActiveDbProvider(): {
   return {
     provider: 'memory',
     isConfigured: false,
-    name: 'Memoria Servidor (Configura Supabase o Upstash para persistencia en nube)',
+    name: 'Memoria Servidor (Configura Supabase o Upstash)',
   };
 }
 

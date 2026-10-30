@@ -7,11 +7,12 @@ import { Sparkles, Calendar, Clock, MapPin, Check, Copy, CalendarPlus, Share2 } 
 
 interface ConsensusBannerProps {
   event: EventData;
+  onOpenShareModal?: () => void;
 }
 
 const DAYS_ORDER: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
+export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event, onOpenShareModal }) => {
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
 
   // 1. Calculate best day
@@ -45,7 +46,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
   const topPlace = sortedPlaces[0];
 
   // 3. Recommended time estimate
-  let recommendedTime = 'A partir de las 19:00 hrs';
+  let recommendedTime = 'A convenir';
   const afterHours = event.participantes
     .filter((p) => p.horario.mode === 'after' && p.horario.afterTime)
     .map((p) => p.horario.afterTime as string)
@@ -53,7 +54,14 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
 
   if (afterHours.length > 0) {
     const latestStart = afterHours[afterHours.length - 1];
-    recommendedTime = `A partir de las ${latestStart} hrs (para que alcancen todos)`;
+    recommendedTime = `A partir de las ${latestStart} hrs`;
+  } else if (event.participantes.length > 0) {
+    const ranges = event.participantes.filter((p) => p.horario.mode === 'range');
+    if (ranges.length > 0 && ranges[0].horario.fromTime) {
+      recommendedTime = `${ranges[0].horario.fromTime} a ${ranges[0].horario.toTime || '23:00'} hrs`;
+    } else {
+      recommendedTime = 'Horario flexible / Todo el día';
+    }
   }
 
   const handleConfetti = () => {
@@ -65,17 +73,22 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
     });
   };
 
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://cotorrea-pachi.vercel.app';
+  const shareUrl = `${currentOrigin}/?e=${event.codigo}`;
+
   const generateWhatsAppMessage = () => {
-    const placeName = topPlace ? topPlace.nombre : 'Por definir';
+    const placeName = topPlace ? topPlace.nombre : 'Por proponer en el mapa';
     const placeAddress = topPlace?.direccionAprox ? ` (${topPlace.direccionAprox})` : '';
     const participantsList = event.participantes.map((p) => p.nombre).join(', ');
 
-    return `🍻 *¡Qué onda plebes! Ya tenemos consenso en Cotorrea Pachi* 🍻\n\n` +
-      `📅 *Día acordado:* ${bestDay} (${bestDayVotes}/${event.participantes.length} amigos)\n` +
+    return `🍻 *¡Qué onda plebes! Ya tenemos acuerdo en Cotorrea Pachi* 🍻\n\n` +
+      `📌 *Salida:* ${event.titulo}\n` +
+      `📅 *Día con más amigos:* ${bestDay} (${bestDayVotes}/${event.participantes.length || 1} amigos)\n` +
       `⏰ *Horario sugerido:* ${recommendedTime}\n` +
-      `📍 *Lugar ganador:* ${placeName}${placeAddress}\n\n` +
-      `👥 *Confirmados:* ${participantsList}\n\n` +
-      `🔗 Revisa los detalles o vota aquí: ${window.location.href}`;
+      `📍 *Lugar favorito:* ${placeName}${placeAddress}\n\n` +
+      `👥 *Confirmados:* ${participantsList || 'Sé el primero'}\n\n` +
+      `👉 Entra aquí para votar o proponer más lugares:\n${shareUrl}\n` +
+      `🔑 Código: ${event.codigo}`;
   };
 
   const handleCopyWhatsApp = async () => {
@@ -95,7 +108,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
       'BEGIN:VEVENT',
       `SUMMARY:${event.titulo}`,
       `DESCRIPTION:Quedada coordinada en Cotorrea Pachi. Lugar: ${topPlace ? topPlace.nombre : 'Por definir'}`,
-      `LOCATION:${topPlace ? topPlace.nombre + (topPlace.direccionAprox ? ' ' + topPlace.direccionAprox : '') : 'Lugar acordado'}`,
+      `LOCATION:${topPlace ? topPlace.nombre + (topPlace.direccionAprox ? ' ' + topPlace.direccionAprox : '') : 'Veracruz'}`,
       'STATUS:CONFIRMED',
       'END:VEVENT',
       'END:VCALENDAR',
@@ -104,7 +117,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', 'cotorrea-pachi-evento.ics');
+    link.setAttribute('download', `cotorrea-${event.codigo}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -121,7 +134,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
         <div className="space-y-4 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-emerald-100 border border-white/20">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Algoritmo de Coincidencia Activo</span>
+            <span>Consenso en Tiempo Real ({event.codigo})</span>
           </div>
 
           <div>
@@ -129,7 +142,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
               🎯 Mejor Opción para la Salida
             </h2>
             <p className="text-teal-100/90 text-xs sm:text-sm mt-1">
-              Basado en los días que marcaron tus amigos, sus horarios y los lugares más votados:
+              Basado en los días y horarios que van marcando tus amigos:
             </p>
           </div>
 
@@ -141,7 +154,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Día Ganador</span>
               </div>
-              <div className="font-bold text-base text-white">{bestDay}</div>
+              <div className="font-bold text-base text-white">{bestDayVotes > 0 ? bestDay : 'Esperando votos'}</div>
               <div className="text-[11px] text-teal-200">
                 {bestDayVotes} de {event.participantes.length} amigos listos
               </div>
@@ -154,7 +167,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
                 <span>Horario Óptimo</span>
               </div>
               <div className="font-bold text-sm text-white truncate">{recommendedTime}</div>
-              <div className="text-[11px] text-teal-200">Cubre salidas de chamba</div>
+              <div className="text-[11px] text-teal-200">Coincidencia de horarios</div>
             </div>
 
             {/* Lugar */}
@@ -164,10 +177,10 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
                 <span>Lugar Favorito</span>
               </div>
               <div className="font-bold text-sm text-white truncate">
-                {topPlace ? topPlace.nombre : 'Por definir'}
+                {topPlace ? topPlace.nombre : 'Sin lugares aún'}
               </div>
               <div className="text-[11px] text-teal-200">
-                {topPlace ? `❤️ ${topPlace.votos.length} votos acumulados` : 'Vota un lugar'}
+                {topPlace ? `❤️ ${topPlace.votos.length} votos` : 'Usa el buscador para agregar'}
               </div>
             </div>
           </div>
@@ -205,7 +218,7 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event }) => {
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-transparent hover:bg-white/10 text-teal-100 font-medium text-xs transition"
           >
             <CalendarPlus className="w-4 h-4 text-teal-200" />
-            <span>Descargar archivo de Calendario (.ics)</span>
+            <span>Descargar archivo Calendario (.ics)</span>
           </button>
         </div>
       </div>

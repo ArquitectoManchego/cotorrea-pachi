@@ -4,11 +4,20 @@ import { Participant } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
-    const body: Participant = await req.json();
-    if (!body.nombre || !body.apellido) {
-      return NextResponse.json({ error: 'Nombre y apellido son obligatorios' }, { status: 400 });
+    const { eventId, participant } = await req.json();
+
+    if (!eventId || !participant || !participant.nombre || !participant.apellido) {
+      return NextResponse.json(
+        { error: 'eventId, nombre y apellido son obligatorios' },
+        { status: 400 }
+      );
     }
-    const updated = await saveParticipant(body);
+
+    const updated = await saveParticipant(eventId, participant as Participant);
+    if (!updated) {
+      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 });
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error saving participant:', error);

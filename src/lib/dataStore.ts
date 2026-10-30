@@ -1,187 +1,124 @@
-import { EventData, Participant, PlaceOption } from '@/types';
+import { EventData, Participant, PlaceOption, DayOfWeek, TimeAvailability } from '@/types';
 import { fetchEventFromCloud, saveEventToCloud } from './cloudDb';
 
-const INITIAL_EVENT: EventData = {
-  id: 'cotorreo-amigos',
-  titulo: '🍻 Quedada de Fin de Semana con la Banda',
-  descripcion: '¡Vamos a ponernos de acuerdo para vernos! Selecciona qué días puedes, tus horarios y propón lugares en el mapa o por nombre.',
-  organizador: 'Alex Manchego',
-  createdAt: new Date().toISOString(),
-  participantes: [
-    {
-      id: 'part-1',
-      nombre: 'Alex',
-      apellido: 'Manchego',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      diasDisponibles: ['Viernes', 'Sábado'],
-      horario: {
-        mode: 'after',
-        afterTime: '19:00',
-      },
-      comentario: '¡Salgo de trabajar a las 6:30! Yo pongo el carro si vamos lejos 🚗',
-      registeredAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    },
-    {
-      id: 'part-2',
-      nombre: 'Sofía',
-      apellido: 'Ramos',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-      diasDisponibles: ['Viernes', 'Sábado', 'Domingo'],
-      horario: {
-        mode: 'range',
-        fromTime: '17:00',
-        toTime: '23:30',
-      },
-      comentario: 'Cualquier lugar con buena comida me late. ¡Prefiero terraza!',
-      registeredAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-    },
-    {
-      id: 'part-3',
-      nombre: 'Carlos',
-      apellido: 'Mendoza',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      diasDisponibles: ['Jueves', 'Viernes', 'Sábado'],
-      horario: {
-        mode: 'any',
-      },
-      comentario: '¡Tengo libre todo el fin! Donde ustedes digan pachi.',
-      registeredAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-    },
-    {
-      id: 'part-4',
-      nombre: 'Mariana',
-      apellido: 'Ortiz',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-      diasDisponibles: ['Sábado', 'Domingo'],
-      horario: {
-        mode: 'after',
-        afterTime: '18:30',
-      },
-      comentario: 'El sábado tengo curso hasta las 6, después me lanzo directo.',
-      registeredAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    },
-  ],
-  lugaresPropuestos: [
-    {
-      id: 'place-1',
-      nombre: 'Cervecería & Terraza El Campanario',
-      categoria: 'bar',
-      descripcion: 'Cerveza artesanal, pizzas al horno de leña y música en vivo al aire libre.',
-      tieneUbicacionMapa: true,
-      latitud: 19.4326,
-      longitud: -99.1332,
-      direccionAprox: 'Centro Histórico, CDMX',
-      propuestoPorId: 'part-1',
-      propuestoPorNombre: 'Alex Manchego',
-      propuestoPorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      votos: ['part-1', 'part-2', 'part-3'],
-      createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-    },
-    {
-      id: 'place-2',
-      nombre: 'Taquería & Mezcal Los Farolitos',
-      categoria: 'restaurante',
-      descripcion: 'Tacos de arrachera, volcanes y muy buen ambiente para platicar a gusto.',
-      tieneUbicacionMapa: true,
-      latitud: 19.4195,
-      longitud: -99.1610,
-      direccionAprox: 'Colonia Roma Norte',
-      propuestoPorId: 'part-2',
-      propuestoPorNombre: 'Sofía Ramos',
-      propuestoPorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-      votos: ['part-2', 'part-4'],
-      createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-    },
-    {
-      id: 'place-3',
-      nombre: 'Terraza en casa de Carlos (Asador & Botana)',
-      categoria: 'casa',
-      descripcion: 'Hacemos carne asada tranquila, cada quien lleva lo que toma y ponemos música chida.',
-      tieneUbicacionMapa: false,
-      direccionAprox: 'Casa de Carlos (sin marcar coordenadas)',
-      propuestoPorId: 'part-3',
-      propuestoPorNombre: 'Carlos Mendoza',
-      propuestoPorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      votos: ['part-1', 'part-3'],
-      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    },
-    {
-      id: 'place-4',
-      nombre: 'Bowling & Arcade Gamezone',
-      categoria: 'entretenimiento',
-      descripcion: 'Líneas de boliche, billar, alitas y cerveza de barril.',
-      tieneUbicacionMapa: true,
-      latitud: 19.3980,
-      longitud: -99.1725,
-      direccionAprox: 'Av. Insurgentes Sur',
-      propuestoPorId: 'part-4',
-      propuestoPorNombre: 'Mariana Ortiz',
-      propuestoPorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-      votos: ['part-4'],
-      createdAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-    },
-  ],
-};
+// Local in-memory cache for fast server responses
+const memoryEvents = new Map<string, EventData>();
 
-let globalEventData: EventData = JSON.parse(JSON.stringify(INITIAL_EVENT));
-let hasLoadedFromCloud = false;
-
-export async function getEventData(): Promise<EventData> {
-  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
-  if (cloudEvent) {
-    globalEventData = cloudEvent;
-    hasLoadedFromCloud = true;
-    return globalEventData;
+function generateEventCode(): string {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  // If this is the first run on an empty cloud database, seed with initial demo
-  if (!hasLoadedFromCloud) {
-    await saveEventToCloud(globalEventData);
-    hasLoadedFromCloud = true;
-  }
-
-  return globalEventData;
+  return `PACHI-${code}`;
 }
 
-export async function saveParticipant(participant: Participant): Promise<EventData> {
-  // Sync latest from cloud first
-  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
+export async function getEventData(eventId?: string): Promise<EventData | null> {
+  if (!eventId) return null;
+
+  const normalizedId = eventId.trim().toUpperCase();
+
+  // Check cloud first
+  const cloudEvent = await fetchEventFromCloud(normalizedId);
   if (cloudEvent) {
-    globalEventData = cloudEvent;
+    memoryEvents.set(normalizedId, cloudEvent);
+    return cloudEvent;
   }
 
-  const existingIdx = globalEventData.participantes.findIndex((p) => p.id === participant.id);
+  // Fallback to memory
+  if (memoryEvents.has(normalizedId)) {
+    return memoryEvents.get(normalizedId) || null;
+  }
+
+  return null;
+}
+
+export interface CreateEventParams {
+  titulo: string;
+  descripcion?: string;
+  organizadorNombre: string;
+  organizadorApellido: string;
+  avatar: string;
+  diasDisponibles: DayOfWeek[];
+  horario: TimeAvailability;
+  comentario?: string;
+}
+
+export async function createNewEvent(params: CreateEventParams): Promise<EventData> {
+  const codigo = generateEventCode();
+  const organizerId = `part-${Date.now()}`;
+
+  const organizerParticipant: Participant = {
+    id: organizerId,
+    nombre: params.organizadorNombre.trim(),
+    apellido: params.organizadorApellido.trim(),
+    avatar: params.avatar,
+    diasDisponibles: params.diasDisponibles,
+    horario: params.horario,
+    comentario: params.comentario?.trim() || undefined,
+    registeredAt: new Date().toISOString(),
+  };
+
+  const newEvent: EventData = {
+    id: codigo,
+    codigo: codigo,
+    titulo: params.titulo.trim(),
+    descripcion: params.descripcion?.trim() || undefined,
+    organizadorNombre: `${params.organizadorNombre.trim()} ${params.organizadorApellido.trim()}`,
+    organizadorId: organizerId,
+    participantes: [organizerParticipant],
+    lugaresPropuestos: [], // ZERO sample places! Real data only
+    createdAt: new Date().toISOString(),
+  };
+
+  memoryEvents.set(codigo, newEvent);
+  await saveEventToCloud(newEvent);
+
+  return newEvent;
+}
+
+export async function saveParticipant(eventId: string, participant: Participant): Promise<EventData | null> {
+  const event = await getEventData(eventId);
+  if (!event) return null;
+
+  const existingIdx = event.participantes.findIndex((p) => p.id === participant.id);
   if (existingIdx >= 0) {
-    globalEventData.participantes[existingIdx] = participant;
+    event.participantes[existingIdx] = participant;
   } else {
-    globalEventData.participantes.push(participant);
+    event.participantes.push(participant);
   }
 
-  // Persist to cloud database
-  await saveEventToCloud(globalEventData);
-  return globalEventData;
+  memoryEvents.set(event.id, event);
+  await saveEventToCloud(event);
+  return event;
 }
 
-export async function addPlaceOption(place: PlaceOption): Promise<EventData> {
-  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
-  if (cloudEvent) {
-    globalEventData = cloudEvent;
+export async function addPlaceOption(eventId: string, place: PlaceOption): Promise<EventData | null> {
+  const event = await getEventData(eventId);
+  if (!event) return null;
+
+  // Prevent duplicate by name or id
+  const existing = event.lugaresPropuestos.find(
+    (p) => p.id === place.id || p.nombre.toLowerCase() === place.nombre.toLowerCase()
+  );
+  if (!existing) {
+    event.lugaresPropuestos.unshift(place);
   }
 
-  globalEventData.lugaresPropuestos.unshift(place);
-
-  // Persist to cloud database
-  await saveEventToCloud(globalEventData);
-  return globalEventData;
+  memoryEvents.set(event.id, event);
+  await saveEventToCloud(event);
+  return event;
 }
 
-export async function toggleVotePlace(placeId: string, participantId: string): Promise<EventData> {
-  const cloudEvent = await fetchEventFromCloud('cotorreo-amigos');
-  if (cloudEvent) {
-    globalEventData = cloudEvent;
-  }
+export async function toggleVotePlace(
+  eventId: string,
+  placeId: string,
+  participantId: string
+): Promise<EventData | null> {
+  const event = await getEventData(eventId);
+  if (!event) return null;
 
-  const place = globalEventData.lugaresPropuestos.find((p) => p.id === placeId);
+  const place = event.lugaresPropuestos.find((p) => p.id === placeId);
   if (place) {
     const hasVoted = place.votos.includes(participantId);
     if (hasVoted) {
@@ -191,13 +128,7 @@ export async function toggleVotePlace(placeId: string, participantId: string): P
     }
   }
 
-  // Persist to cloud database
-  await saveEventToCloud(globalEventData);
-  return globalEventData;
-}
-
-export async function resetToDemo(): Promise<EventData> {
-  globalEventData = JSON.parse(JSON.stringify(INITIAL_EVENT));
-  await saveEventToCloud(globalEventData);
-  return globalEventData;
+  memoryEvents.set(event.id, event);
+  await saveEventToCloud(event);
+  return event;
 }

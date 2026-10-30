@@ -10,18 +10,19 @@ export async function GET(req: NextRequest) {
 
   try {
     const cleanQuery = q.trim();
-    // Fetch from OpenStreetMap Nominatim with proper User-Agent
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        cleanQuery
-      )}&limit=5&addressdetails=1`,
-      {
-        headers: {
-          'User-Agent': 'CotorreaPachi/1.0 (https://cotorrea-pachi.vercel.app; info@cotorreapachi.app)',
-          'Accept-Language': 'es,en;q=0.9',
-        },
-      }
-    );
+
+    // Query Nominatim with viewbox prioritized around Boulevard Manuel Avila Camacho, Veracruz (viewbox: -96.25,19.26 to -96.04,19.08)
+    const viewbox = '-96.25,19.26,-96.04,19.08';
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      cleanQuery
+    )}&limit=6&addressdetails=1&viewbox=${viewbox}&bounded=0`;
+
+    const res = await fetch(nominatimUrl, {
+      headers: {
+        'User-Agent': 'CotorreaPachi/1.0 (https://cotorrea-pachi.vercel.app; info@cotorreapachi.app)',
+        'Accept-Language': 'es,en;q=0.9',
+      },
+    });
 
     if (!res.ok) {
       console.warn(`Geocoding response status: ${res.status}`);

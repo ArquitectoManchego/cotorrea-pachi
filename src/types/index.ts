@@ -39,11 +39,21 @@ export interface PlaceOption {
 }
 
 export interface EventData {
-  id: string;
+  id: string; // unique code e.g. "PACHI-8392"
+  codigo: string;
   titulo: string;
-  descripcion: string;
-  organizador: string;
+  descripcion?: string;
+  organizadorNombre: string;
+  organizadorId: string;
   participantes: Participant[];
   lugaresPropuestos: PlaceOption[];
   createdAt: string;
 }
+
+// Center of Boulevard Manuel Ávila Camacho, Veracruz / Boca del Río
+export const VERACRUZ_DEFAULT_COORDS = {
+  lat: 19.1620,
+  lng: -96.1100,
+  zoom: 14,
+  name: 'Boulevard Manuel Ávila Camacho, Veracruz / Boca del Río',
+};
