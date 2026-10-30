@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Participant, PlaceCategory, PlaceOption } from '@/types';
-import { MapPicker } from './MapPicker';
+import { GoogleMapPicker } from './GoogleMapPicker';
 import {
   X,
   MapPin,
@@ -76,7 +76,7 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
       propuestoPorId: currentParticipant.id,
       propuestoPorNombre: `${currentParticipant.nombre} ${currentParticipant.apellido}`,
       propuestoPorAvatar: currentParticipant.avatar,
-      votos: [currentParticipant.id], // auto-vote for own suggestion
+      votos: [currentParticipant.id],
       createdAt: new Date().toISOString(),
     };
 
@@ -90,13 +90,13 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs overflow-y-auto">
       <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-200/90 my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50/50 to-teal-50/30">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50/70 to-emerald-50/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
               <MapPin className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Proponer Dónde Ir</h2>
+              <h2 className="text-lg font-bold text-slate-800">Proponer Dónde Ir con Google Maps</h2>
               <p className="text-xs text-slate-500">Agrega un bar, terraza, comida o tu casa para el evento</p>
             </div>
           </div>
@@ -118,7 +118,7 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Ej. Cervecería El Campanario / Tacos El Güero / Mi casa con asador"
+              placeholder="Ej. Cervecería El Campanario / Tacos Los Farolitos / Mi casa"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
@@ -138,18 +138,18 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
                   onClick={() => setCategoria(cat.id)}
                   className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-medium border transition ${
                     categoria === cat.id
-                      ? 'border-amber-500 bg-amber-50 text-amber-900 font-semibold'
+                      ? 'border-teal-500 bg-teal-50 text-teal-900 font-semibold shadow-2xs'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
                 >
-                  <span className="text-amber-600">{cat.icon}</span>
+                  <span className="text-teal-600">{cat.icon}</span>
                   <span className="truncate">{cat.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Descripción / Por qué este lugar */}
+          {/* Descripción */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               ¿Por qué recomiendas este lugar? (opcional)
@@ -163,7 +163,7 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
             />
           </div>
 
-          {/* Selector de Modo: Mapa vs Solo Nombre */}
+          {/* Selector de Modo: Google Maps vs Solo Nombre */}
           <div className="pt-2 border-t border-slate-100">
             <label className="block text-xs font-semibold text-slate-700 mb-2">
               ¿Cómo quieres indicar la ubicación?
@@ -179,7 +179,7 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
                 }`}
               >
                 <MapPin className="w-4 h-4 text-teal-600" />
-                <span>Marcar en Mapa</span>
+                <span>Google Maps (Buscar y Ver)</span>
               </button>
 
               <button
@@ -196,9 +196,8 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
               </button>
             </div>
 
-            {/* Render mapa interactivo solo si eligió marcar en mapa */}
             {tieneUbicacionMapa ? (
-              <MapPicker
+              <GoogleMapPicker
                 lat={latitud}
                 lng={longitud}
                 address={direccionAprox}
@@ -215,22 +214,6 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
             )}
           </div>
 
-          {/* Proposer indicator */}
-          {currentParticipant ? (
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
-              <img
-                src={currentParticipant.avatar}
-                alt={currentParticipant.nombre}
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              <span>Proponiendo como <strong>{currentParticipant.nombre} {currentParticipant.apellido}</strong></span>
-            </div>
-          ) : (
-            <div className="p-2.5 bg-amber-50 text-amber-800 rounded-xl text-xs border border-amber-200">
-              ⚠️ Para proponer un lugar primero debes registrar tu nombre y disponibilidad. Al hacer clic te abriremos el registro.
-            </div>
-          )}
-
           {/* Footer buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <button
@@ -243,10 +226,10 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
             <button
               type="submit"
               disabled={!nombre.trim()}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-semibold transition shadow-sm shadow-amber-500/20"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-semibold transition shadow-sm shadow-teal-600/20"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Publicar Propuesta</span>
+              <span>Agregar a la Lista</span>
             </button>
           </div>
         </form>

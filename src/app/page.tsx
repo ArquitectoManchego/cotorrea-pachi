@@ -6,7 +6,8 @@ import { Navbar } from '@/components/Navbar';
 import { ConsensusBanner } from '@/components/ConsensusBanner';
 import { AvailabilityGrid } from '@/components/AvailabilityGrid';
 import { PlacesList } from '@/components/PlacesList';
-import { InteractiveMap } from '@/components/InteractiveMap';
+import { GoogleMapView } from '@/components/GoogleMapView';
+import { GooglePlaceSearchBar } from '@/components/GooglePlaceSearchBar';
 import { RegisterModal } from '@/components/RegisterModal';
 import { ProposePlaceModal } from '@/components/ProposePlaceModal';
 import {
@@ -16,7 +17,7 @@ import {
   Users,
   Sparkles,
   Info,
-  Layers,
+  Compass,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -132,7 +133,7 @@ export default function HomePage() {
         <div className="w-12 h-12 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-md animate-pulse">
           <Sparkles className="w-6 h-6 animate-spin" />
         </div>
-        <p className="text-sm font-semibold text-slate-600 mt-4">Cargando Cotorrea Pachi...</p>
+        <p className="text-sm font-semibold text-slate-600 mt-4">Cargando Cotorrea Pachi con Google Maps...</p>
       </div>
     );
   }
@@ -191,6 +192,13 @@ export default function HomePage() {
         {/* Smart Consensus / Matchmaker Result */}
         <ConsensusBanner event={eventData} />
 
+        {/* Google Maps Quick Search & Add Bar */}
+        <GooglePlaceSearchBar
+          currentParticipant={currentParticipant}
+          onAddPlace={handleProposePlace}
+          onRequireParticipant={() => setIsRegisterOpen(true)}
+        />
+
         {/* View Switcher / Tabs for Responsive layout */}
         <div className="flex items-center justify-between border-b border-slate-200 pb-3 pt-2">
           <div className="flex items-center gap-2">
@@ -202,8 +210,8 @@ export default function HomePage() {
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Mapa y Lugares ({eventData.lugaresPropuestos.length})</span>
+              <Compass className="w-3.5 h-3.5" />
+              <span>Google Maps y Lugares ({eventData.lugaresPropuestos.length})</span>
             </button>
 
             <button
@@ -221,33 +229,23 @@ export default function HomePage() {
 
           <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-400">
             <Info className="w-3.5 h-3.5" />
-            <span>Actualizado en tiempo real</span>
+            <span>Mapas de Google integrados</span>
           </span>
         </div>
 
-        {/* Tab Content 1: Map and Places */}
+        {/* Tab Content 1: Google Map and Places */}
         {activeTab === 'map' && (
           <div className="space-y-6">
-            {/* Interactive Map */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-teal-600" />
-                  <span>Explorador de Lugares en el Mapa</span>
-                </h3>
-                <span className="text-xs text-slate-500">
-                  Haz clic en cualquier pin para ver quién lo propuso y votar
-                </span>
-              </div>
-              <InteractiveMap
-                places={eventData.lugaresPropuestos}
-                currentParticipantId={currentParticipant?.id}
-                onVote={handleVote}
-                selectedPlaceId={selectedPlaceId}
-              />
-            </div>
+            {/* Google Maps Interactive View */}
+            <GoogleMapView
+              places={eventData.lugaresPropuestos}
+              currentParticipantId={currentParticipant?.id}
+              onVote={handleVote}
+              selectedPlaceId={selectedPlaceId}
+              onSelectPlace={(id) => setSelectedPlaceId(id)}
+            />
 
-            {/* Places List */}
+            {/* Places List with Google Maps Links & Votes */}
             <PlacesList
               places={eventData.lugaresPropuestos}
               currentParticipantId={currentParticipant?.id}
@@ -255,7 +253,7 @@ export default function HomePage() {
               onOpenPropose={() => setIsProposeOpen(true)}
               onSelectOnMap={(placeId) => {
                 setSelectedPlaceId(placeId);
-                window.scrollTo({ top: 320, behavior: 'smooth' });
+                window.scrollTo({ top: 460, behavior: 'smooth' });
               }}
             />
           </div>
@@ -277,7 +275,7 @@ export default function HomePage() {
       <footer className="mt-12 bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
-            🍻 <strong>Cotorrea Pachi</strong> &copy; 2026. Diseñado para que armar la salida sea rápido y sin pleitos.
+            🍻 <strong>Cotorrea Pachi</strong> &copy; 2026. Con Google Maps integrado para llegar sin perderse.
           </p>
           <div className="flex items-center gap-4">
             <a
