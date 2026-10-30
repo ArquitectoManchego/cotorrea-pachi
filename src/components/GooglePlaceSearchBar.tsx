@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 
 interface SearchResult {
+  name: string;
   displayName: string;
-  shortName: string;
   lat: number;
   lng: number;
   address: string;
@@ -58,7 +58,7 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search when user types
+  // Search when typing (debounced)
   useEffect(() => {
     if (!query.trim() || query.length < 3) {
       setResults([]);
@@ -68,42 +68,44 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            query
-          )}&limit=5&addressdetails=1`
-        );
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(query)}`);
         if (res.ok) {
-          const data = await res.json();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const mapped: SearchResult[] = data.map((item: any) => {
-            const parts = item.display_name.split(',');
-            const shortName = parts[0].trim();
-            const address = parts.slice(1, 4).join(',').trim();
-            return {
-              displayName: item.display_name,
-              shortName: shortName,
-              lat: parseFloat(item.lat),
-              lng: parseFloat(item.lon),
-              address: address || item.display_name,
-            };
-          });
-          setResults(mapped);
+          const data: SearchResult[] = await res.json();
+          setResults(data);
         }
       } catch (err) {
         console.error('Error searching place:', err);
       } finally {
         setIsLoading(false);
       }
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [query]);
 
   const handleSelectResult = (result: SearchResult) => {
     setSelectedResult(result);
-    setQuery(result.shortName);
+    setQuery(result.name);
     setResults([]);
+  };
+
+  const handleManualSearch = async () => {
+    if (!query.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/places/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data: SearchResult[] = await res.json();
+        setResults(data);
+        if (data.length > 0) {
+          setSelectedResult(data[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Error searching place:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -115,7 +117,7 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
       return;
     }
 
-    const placeName = selectedResult ? selectedResult.shortName : query.trim();
+    const placeName = selectedResult ? selectedResult.name : query.trim();
     const hasMap = Boolean(selectedResult);
 
     const newPlace: PlaceOption = {
@@ -126,7 +128,7 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
       tieneUbicacionMapa: hasMap,
       latitud: selectedResult?.lat,
       longitud: selectedResult?.lng,
-      direccionAprox: selectedResult?.address || 'Agregado por búsqueda',
+      direccionAprox: selectedResult?.address || 'Agregado por nombre',
       propuestoPorId: currentParticipant.id,
       propuestoPorNombre: `${currentParticipant.nombre} ${currentParticipant.apellido}`,
       propuestoPorAvatar: currentParticipant.avatar,
@@ -175,15 +177,31 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                if (selectedResult && e.target.value !== selectedResult.shortName) {
+                if (selectedResult && e.target.value !== selectedResult.name) {
                   setSelectedResult(null);
                 }
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && results.length > 0) {
+                  e.preventDefault();
+                  handleSelectResult(results[0]);
+                }
+              }}
               placeholder="Escribe el nombre del lugar (ej. Cervecería El Campanario, Pizzería Cancino, Parque México...)"
-              className="w-full pl-10 pr-24 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition"
+              className="w-full pl-10 pr-28 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition"
             />
             <div className="absolute right-3 flex items-center gap-2">
-              {isLoading && <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />}
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleManualSearch}
+                  className="text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg transition"
+                >
+                  Buscar
+                </button>
+              )}
               {query.trim() && (
                 <a
                   href={googleMapsSearchUrl}
@@ -207,7 +225,7 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
             >
               <div className="p-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 flex items-center justify-between">
                 <span>Resultados de Google Maps / Coordenadas:</span>
-                <span className="font-normal text-slate-500">Selecciona uno para ubicarlo con precisión</span>
+                <span className="font-normal text-slate-500">Haz clic en una opción para seleccionarla</span>
               </div>
               {results.map((res, idx) => (
                 <button
@@ -218,7 +236,7 @@ export const GooglePlaceSearchBar: React.FC<GooglePlaceSearchBarProps> = ({
                 >
                   <MapPin className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                   <div className="truncate">
-                    <p className="text-xs font-bold text-slate-800 truncate">{res.shortName}</p>
+                    <p className="text-xs font-bold text-slate-800 truncate">{res.name}</p>
                     <p className="text-[11px] text-slate-500 truncate">{res.address}</p>
                   </div>
                 </button>

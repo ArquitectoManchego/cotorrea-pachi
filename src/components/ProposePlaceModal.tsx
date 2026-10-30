@@ -101,6 +101,7 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition"
           >
@@ -201,10 +202,11 @@ export const ProposePlaceModal: React.FC<ProposePlaceModalProps> = ({
                 lat={latitud}
                 lng={longitud}
                 address={direccionAprox}
-                onChange={(newLat, newLng, newAddr) => {
+                onChange={(newLat, newLng, newAddr, placeName) => {
                   setLatitud(newLat);
                   setLongitud(newLng);
                   if (newAddr) setDireccionAprox(newAddr);
+                  if (placeName && !nombre.trim()) setNombre(placeName);
                 }}
               />
             ) : (
