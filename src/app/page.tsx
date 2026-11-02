@@ -13,6 +13,7 @@ import { ProposePlaceModal } from '@/components/ProposePlaceModal';
 import { CreateEventModal } from '@/components/CreateEventModal';
 import { ShareEventModal } from '@/components/ShareEventModal';
 import { DatabaseStatusModal } from '@/components/DatabaseStatusModal';
+import { ResultsModal } from '@/components/ResultsModal';
 import { CreateEventParams } from '@/lib/dataStore';
 import {
   MapPin,
@@ -26,6 +27,7 @@ import {
   MessageCircle,
   Clock,
   History,
+  Trophy,
 } from 'lucide-react';
 
 interface DbStatus {
@@ -60,6 +62,7 @@ function HomeContent() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isProposeOpen, setIsProposeOpen] = useState(false);
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [isResultsOpen, setIsResultsOpen] = useState(false);
 
   // Map state
   const [previewPlace, setPreviewPlace] = useState<{ name: string; lat: number; lng: number; address: string } | null>(null);
@@ -208,6 +211,7 @@ function HomeContent() {
         setCurrentParticipant(participant);
         localStorage.setItem(`cotorrea_user_${currentEvent.codigo}`, participant.id);
         localStorage.setItem('cotorrea_pachi_user_id', participant.id);
+        setIsResultsOpen(true);
       }
     } catch (err) {
       console.error('Error guardando participante:', err);
@@ -413,6 +417,15 @@ function HomeContent() {
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
               <button
                 type="button"
+                onClick={() => setIsResultsOpen(true)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs transition shadow-sm shadow-amber-500/20 active:scale-95"
+              >
+                <Trophy className="w-4 h-4 fill-white" />
+                <span>Resultados y Likes 🏆</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsShareModalOpen(true)}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs transition shadow-sm shadow-emerald-500/20 active:scale-95"
               >
@@ -435,6 +448,7 @@ function HomeContent() {
           <ConsensusBanner
             event={currentEvent}
             onOpenShareModal={() => setIsShareModalOpen(true)}
+            onOpenResultsModal={() => setIsResultsOpen(true)}
           />
 
           {/* Search and Add Location with Google Maps */}
@@ -443,6 +457,7 @@ function HomeContent() {
             onAddPlace={handleAddPlace}
             onPreviewPlace={(preview) => setPreviewPlace(preview)}
             onRequireParticipant={() => setIsRegisterOpen(true)}
+            externalSelectedPlace={previewPlace}
           />
 
           {/* Navigation View Switcher */}
@@ -500,6 +515,9 @@ function HomeContent() {
                   onVote={handleVote}
                   focusedPlace={focusedPlace}
                   previewPlace={previewPlace}
+                  onSelectLocation={(loc) => {
+                    setPreviewPlace(loc);
+                  }}
                 />
               </div>
 
@@ -591,6 +609,28 @@ function HomeContent() {
         onClose={() => setIsDbModalOpen(false)}
         dbStatus={dbStatus}
       />
+
+      {currentEvent && (
+        <ResultsModal
+          isOpen={isResultsOpen}
+          onClose={() => setIsResultsOpen(false)}
+          event={currentEvent}
+          currentParticipant={currentParticipant}
+          onVote={handleVote}
+          onOpenPropose={() => setIsProposeOpen(true)}
+          onOpenShareModal={() => setIsShareModalOpen(true)}
+          onViewOnMap={(place) => {
+            if (place) {
+              handleSelectPlaceOnMap(place);
+            } else {
+              setActiveTab('map');
+              if (mapSectionRef.current) {
+                mapSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -175,6 +175,20 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({
                 Pégalas en <strong>Vercel (Settings → Environment Variables)</strong> o en tu archivo <code>.env.local</code>. ¡Y la app persistirá al instante en la nube para siempre!
               </li>
             </ol>
+
+            {/* Google Maps API Key info section */}
+            <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 text-xs space-y-2">
+              <div className="flex items-center gap-2 text-teal-900 font-bold">
+                <span className="text-base">🗺️</span>
+                <span>Sobre la API Key de Google Maps</span>
+              </div>
+              <p className="text-teal-800 text-[11px] leading-relaxed">
+                <strong>¡No requieres ninguna API Key para usar o seleccionar en el mapa!</strong> Cotorrea Pachi ya incluye selección interactiva haciendo clic en cualquier parte del mapa, arrastrando el pin y buscando ubicaciones sin costo ni límites.
+              </p>
+              <p className="text-teal-700 text-[11px] leading-relaxed">
+                Si cuentas con una Clave de API de Google Maps de tu propia cuenta de Google Cloud y deseas asociarla en el servidor, puedes agregar la variable <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> en Vercel o <code>.env.local</code>.
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center justify-end pt-2">

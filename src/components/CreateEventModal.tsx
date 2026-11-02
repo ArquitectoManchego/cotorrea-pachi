@@ -1,9 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
-import { DayOfWeek, TimeMode } from '@/types';
+import React, { useState, useRef } from 'react';
 import { CreateEventParams } from '@/lib/dataStore';
-import { X, CalendarDays, Clock, User, Sparkles, Upload, Check } from 'lucide-react';
+import { DayOfWeek, TimeMode } from '@/types';
+import {
+  CalendarDays,
+  Clock,
+  Sparkles,
+  User,
+  Upload,
+  X,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
+
+interface CreateEventModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (params: CreateEventParams) => void;
+}
 
 const DAYS_LIST: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -14,19 +29,11 @@ const DEFAULT_AVATARS = [
   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
 ];
 
-interface CreateEventModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreate: (params: CreateEventParams) => void;
-}
-
-export const CreateEventModal: React.FC<CreateEventModalProps> = ({
-  isOpen,
-  onClose,
-  onCreate,
-}) => {
+export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreate }) => {
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [organizadorNombre, setOrganizadorNombre] = useState('');
@@ -34,13 +41,32 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [avatar, setAvatar] = useState(DEFAULT_AVATARS[0]);
   const [diasDisponibles, setDiasDisponibles] = useState<DayOfWeek[]>(['Viernes', 'Sábado']);
   const [timeMode, setTimeMode] = useState<TimeMode>('after');
-  const [fromTime, setFromTime] = useState('19:00');
-  const [toTime, setToTime] = useState('23:30');
-  const [afterTime, setAfterTime] = useState('19:30');
+  const [fromTime, setFromTime] = useState('18:00');
+  const [toTime, setToTime] = useState('23:00');
+  const [afterTime, setAfterTime] = useState('19:00');
   const [comentario, setComentario] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   if (!isOpen) return null;
+
+  // Real-time validations
+  const isTitleEmpty = !titulo.trim();
+  const isNameEmpty = !organizadorNombre.trim();
+  const isLastNameEmpty = !organizadorApellido.trim();
+  const isDaysEmpty = diasDisponibles.length === 0;
+
+  // Time validations
+  const isRangeMissing = timeMode === 'range' && (!fromTime || !toTime);
+  const isRangeOrderInvalid = timeMode === 'range' && fromTime && toTime && fromTime >= toTime;
+  const isAfterMissing = timeMode === 'after' && !afterTime;
+
+  const hasRangeError = isRangeMissing || isRangeOrderInvalid;
+  const hasAfterError = isAfterMissing;
+  const hasTimeError = hasRangeError || hasAfterError;
+
+  const isFormValid = !isTitleEmpty && !isNameEmpty && !isLastNameEmpty && !isDaysEmpty && !hasTimeError;
 
   const toggleDay = (day: DayOfWeek) => {
     if (diasDisponibles.includes(day)) {
@@ -65,7 +91,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim() || !organizadorNombre.trim() || !organizadorApellido.trim()) return;
+    setAttemptedSubmit(true);
+
+    if (!isFormValid) {
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     onCreate({
@@ -103,27 +136,65 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* Banner de error si intentó enviar incompleto */}
+          {attemptedSubmit && !isFormValid && (
+            <div className="p-3.5 rounded-2xl bg-red-50 border-2 border-red-400 text-red-800 text-xs flex items-start gap-2.5 shadow-sm">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-bold text-red-900 block">
+                  Falta información obligatoria para crear la salida:
+                </strong>
+                <span className="text-red-700">
+                  Por favor revisa los campos marcados en <strong>rojo</strong> abajo (
+                  {[
+                    isTitleEmpty && 'Nombre del evento',
+                    isNameEmpty && 'Tu Nombre',
+                    isLastNameEmpty && 'Tu Apellido',
+                    isDaysEmpty && 'Días disponibles',
+                    hasTimeError && 'Horario válido',
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                  ).
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Título de la salida */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label
+              className={`block text-xs font-bold uppercase tracking-wider mb-1 ${
+                attemptedSubmit && isTitleEmpty ? 'text-red-600' : 'text-slate-700'
+              }`}
+            >
               Nombre de la salida o evento *
             </label>
             <input
               type="text"
-              required
               placeholder="Ej. Cheves en el Boulevard / Salida de Viernes / Cumpleaños de Alex"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-medium"
+              className={`w-full px-4 py-2.5 text-sm rounded-xl border font-medium transition ${
+                attemptedSubmit && isTitleEmpty
+                  ? 'border-2 border-red-500 bg-red-50/50 text-red-900 focus:outline-none focus:ring-2 focus:ring-red-200'
+                  : 'border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500'
+              }`}
             />
+            {attemptedSubmit && isTitleEmpty && (
+              <p className="text-[11px] font-semibold text-red-600 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                <span>El nombre de la salida es obligatorio</span>
+              </p>
+            )}
           </div>
 
           {/* Descripción opcional */}
@@ -149,26 +220,56 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Tu Nombre *</label>
+                <label
+                  className={`block text-xs font-semibold mb-1 ${
+                    attemptedSubmit && isNameEmpty ? 'text-red-600 font-bold' : 'text-slate-700'
+                  }`}
+                >
+                  Tu Nombre *
+                </label>
                 <input
                   type="text"
-                  required
                   placeholder="Ej. Alex"
                   value={organizadorNombre}
                   onChange={(e) => setOrganizadorNombre(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                  className={`w-full px-3.5 py-2 text-xs rounded-xl border transition ${
+                    attemptedSubmit && isNameEmpty
+                      ? 'border-2 border-red-500 bg-red-50/50 text-red-900 focus:ring-red-200'
+                      : 'border-slate-200 focus:outline-none focus:border-teal-500'
+                  }`}
                 />
+                {attemptedSubmit && isNameEmpty && (
+                  <p className="text-[11px] font-semibold text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>Tu nombre es obligatorio</span>
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Tu Apellido *</label>
+                <label
+                  className={`block text-xs font-semibold mb-1 ${
+                    attemptedSubmit && isLastNameEmpty ? 'text-red-600 font-bold' : 'text-slate-700'
+                  }`}
+                >
+                  Tu Apellido *
+                </label>
                 <input
                   type="text"
-                  required
                   placeholder="Ej. Manchego"
                   value={organizadorApellido}
                   onChange={(e) => setOrganizadorApellido(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                  className={`w-full px-3.5 py-2 text-xs rounded-xl border transition ${
+                    attemptedSubmit && isLastNameEmpty
+                      ? 'border-2 border-red-500 bg-red-50/50 text-red-900 focus:ring-red-200'
+                      : 'border-slate-200 focus:outline-none focus:border-teal-500'
+                  }`}
                 />
+                {attemptedSubmit && isLastNameEmpty && (
+                  <p className="text-[11px] font-semibold text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>Tu apellido es obligatorio</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -204,13 +305,21 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           </div>
 
           {/* Días disponibles del creador */}
-          <div className="pt-2 border-t border-slate-100">
+          <div
+            className={`pt-2 border-t border-slate-100 transition rounded-2xl ${
+              attemptedSubmit && isDaysEmpty ? 'border-2 border-red-500 bg-red-50/40 p-3' : ''
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                <CalendarDays className="w-4 h-4 text-teal-600" />
+              <label
+                className={`flex items-center gap-1.5 text-xs font-semibold ${
+                  attemptedSubmit && isDaysEmpty ? 'text-red-700 font-bold' : 'text-slate-700'
+                }`}
+              >
+                <CalendarDays className={`w-4 h-4 ${attemptedSubmit && isDaysEmpty ? 'text-red-600' : 'text-teal-600'}`} />
                 <span>¿Qué días puedes tú? (Casillas de verificación) *</span>
               </label>
-              <span className="text-[11px] text-teal-600 font-semibold">
+              <span className={`text-[11px] font-semibold ${attemptedSubmit && isDaysEmpty ? 'text-red-600' : 'text-teal-600'}`}>
                 {diasDisponibles.length} días
               </span>
             </div>
@@ -223,53 +332,80 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     key={day}
                     type="button"
                     onClick={() => toggleDay(day)}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-medium transition ${
+                    className={`flex items-center justify-between p-2 rounded-xl border text-xs font-medium transition ${
                       isSelected
-                        ? 'border-teal-500 bg-teal-50/80 text-teal-900 font-semibold shadow-2xs'
+                        ? 'border-teal-600 bg-teal-50 text-teal-800'
+                        : attemptedSubmit && isDaysEmpty
+                        ? 'border-red-300 bg-white text-red-800'
                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     <span>{day}</span>
                     <div
-                      className={`w-4 h-4 rounded-md flex items-center justify-center transition ${
-                        isSelected ? 'bg-teal-600 text-white' : 'border border-slate-300'
+                      className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
+                        isSelected
+                          ? 'border-teal-600 bg-teal-600 text-white'
+                          : attemptedSubmit && isDaysEmpty
+                          ? 'border-red-400 bg-white'
+                          : 'border-slate-300'
                       }`}
                     >
-                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                     </div>
                   </button>
                 );
               })}
             </div>
+
+            {attemptedSubmit && isDaysEmpty && (
+              <p className="text-[11px] font-bold text-red-600 mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>Debes seleccionar al menos un día disponible</span>
+              </p>
+            )}
           </div>
 
           {/* Horario del creador */}
-          <div className="pt-2 border-t border-slate-100">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 mb-2">
-              <Clock className="w-4 h-4 text-teal-600" />
+          <div
+            className={`pt-2 border-t border-slate-100 transition rounded-2xl ${
+              attemptedSubmit && hasTimeError ? 'border-2 border-red-500 bg-red-50/40 p-3' : ''
+            }`}
+          >
+            <label
+              className={`flex items-center gap-1.5 text-xs font-semibold mb-2 ${
+                attemptedSubmit && hasTimeError ? 'text-red-700 font-bold' : 'text-slate-700'
+              }`}
+            >
+              <Clock className={`w-4 h-4 ${attemptedSubmit && hasTimeError ? 'text-red-600' : 'text-teal-600'}`} />
               <span>¿En qué horario estás disponible? *</span>
             </label>
 
             <div className="space-y-2">
-              <label
-                className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer text-xs transition ${
-                  timeMode === 'any' ? 'border-teal-500 bg-teal-50/40 text-teal-900 font-semibold' : 'border-slate-200 text-slate-700'
+              <div
+                className={`p-2.5 rounded-xl border transition ${
+                  timeMode === 'any' ? 'border-teal-500 bg-teal-50/40' : 'border-slate-200 text-slate-700'
                 }`}
               >
-                <input
-                  type="radio"
-                  name="timeMode"
-                  value="any"
-                  checked={timeMode === 'any'}
-                  onChange={() => setTimeMode('any')}
-                  className="w-4 h-4 text-teal-600"
-                />
-                <span>Puedo a cualquier hora del día / Todo el día</span>
-              </label>
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs">
+                  <input
+                    type="radio"
+                    name="timeMode"
+                    value="any"
+                    checked={timeMode === 'any'}
+                    onChange={() => setTimeMode('any')}
+                    className="w-4 h-4 text-teal-600"
+                  />
+                  <span className="font-semibold text-slate-800">Cualquier horario del día</span>
+                </label>
+              </div>
 
               <div
                 className={`p-2.5 rounded-xl border transition ${
-                  timeMode === 'range' ? 'border-teal-500 bg-teal-50/40' : 'border-slate-200 text-slate-700'
+                  attemptedSubmit && hasRangeError
+                    ? 'border-2 border-red-500 bg-red-50/70'
+                    : timeMode === 'range'
+                    ? 'border-teal-500 bg-teal-50/40'
+                    : 'border-slate-200 text-slate-700'
                 }`}
               >
                 <label className="flex items-center gap-2.5 cursor-pointer text-xs mb-1.5">
@@ -281,31 +417,61 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     onChange={() => setTimeMode('range')}
                     className="w-4 h-4 text-teal-600"
                   />
-                  <span className="font-semibold text-slate-800">Tengo un rango de horario específico</span>
+                  <span className={`font-semibold ${attemptedSubmit && hasRangeError ? 'text-red-800 font-bold' : 'text-slate-800'}`}>
+                    Rango específico (De X a Y)
+                  </span>
                 </label>
                 {timeMode === 'range' && (
-                  <div className="flex items-center gap-2 pl-6 pt-1 text-xs">
-                    <span>De:</span>
-                    <input
-                      type="time"
-                      value={fromTime}
-                      onChange={(e) => setFromTime(e.target.value)}
-                      className="px-2 py-1 rounded-lg border border-slate-300 bg-white"
-                    />
-                    <span>A:</span>
-                    <input
-                      type="time"
-                      value={toTime}
-                      onChange={(e) => setToTime(e.target.value)}
-                      className="px-2 py-1 rounded-lg border border-slate-300 bg-white"
-                    />
+                  <div className="pl-6 pt-1 space-y-1.5 text-xs">
+                    <div className="flex items-center gap-3">
+                      <span>De:</span>
+                      <input
+                        type="time"
+                        value={fromTime}
+                        onChange={(e) => setFromTime(e.target.value)}
+                        className={`px-2 py-1 rounded-lg border font-medium ${
+                          attemptedSubmit && (!fromTime || isRangeOrderInvalid)
+                            ? 'border-2 border-red-500 bg-red-50 text-red-900'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      />
+                      <span>A:</span>
+                      <input
+                        type="time"
+                        value={toTime}
+                        onChange={(e) => setToTime(e.target.value)}
+                        className={`px-2 py-1 rounded-lg border font-medium ${
+                          attemptedSubmit && (!toTime || isRangeOrderInvalid)
+                            ? 'border-2 border-red-500 bg-red-50 text-red-900'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      />
+                    </div>
+
+                    {attemptedSubmit && isRangeMissing && (
+                      <p className="text-[11px] font-bold text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Debes ingresar ambas horas (inicio y fin)</span>
+                      </p>
+                    )}
+
+                    {attemptedSubmit && isRangeOrderInvalid && (
+                      <p className="text-[11px] font-bold text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>La hora inicial ({fromTime}) debe ser menor a la hora final ({toTime})</span>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
               <div
                 className={`p-2.5 rounded-xl border transition ${
-                  timeMode === 'after' ? 'border-teal-500 bg-teal-50/40' : 'border-slate-200 text-slate-700'
+                  attemptedSubmit && hasAfterError
+                    ? 'border-2 border-red-500 bg-red-50/70'
+                    : timeMode === 'after'
+                    ? 'border-teal-500 bg-teal-50/40'
+                    : 'border-slate-200 text-slate-700'
                 }`}
               >
                 <label className="flex items-center gap-2.5 cursor-pointer text-xs mb-1.5">
@@ -317,17 +483,32 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     onChange={() => setTimeMode('after')}
                     className="w-4 h-4 text-teal-600"
                   />
-                  <span className="font-semibold text-slate-800">Libre a partir de cierto horario</span>
+                  <span className={`font-semibold ${attemptedSubmit && hasAfterError ? 'text-red-800 font-bold' : 'text-slate-800'}`}>
+                    Libre a partir de cierto horario
+                  </span>
                 </label>
                 {timeMode === 'after' && (
-                  <div className="flex items-center gap-2 pl-6 pt-1 text-xs">
-                    <span>Disponible a partir de las:</span>
-                    <input
-                      type="time"
-                      value={afterTime}
-                      onChange={(e) => setAfterTime(e.target.value)}
-                      className="px-2 py-1 rounded-lg border border-slate-300 bg-white"
-                    />
+                  <div className="pl-6 pt-1 text-xs space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span>Disponible a partir de las:</span>
+                      <input
+                        type="time"
+                        value={afterTime}
+                        onChange={(e) => setAfterTime(e.target.value)}
+                        className={`px-2 py-1 rounded-lg border font-medium ${
+                          attemptedSubmit && isAfterMissing
+                            ? 'border-2 border-red-500 bg-red-50 text-red-900'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      />
+                    </div>
+
+                    {attemptedSubmit && isAfterMissing && (
+                      <p className="text-[11px] font-bold text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Debes indicar la hora a partir de la cual estás libre</span>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -349,7 +530,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
@@ -359,8 +540,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !titulo.trim() || !organizadorNombre.trim() || !organizadorApellido.trim() || diasDisponibles.length === 0}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold transition shadow-md shadow-teal-600/20 active:scale-95"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold transition shadow-md shadow-teal-600/20 active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
               <span>{isSubmitting ? 'Creando Salida...' : '🚀 Crear Salida y Obtener Código'}</span>

@@ -8,11 +8,16 @@ import { Sparkles, Calendar, Clock, MapPin, Check, Copy, CalendarPlus, Share2 } 
 interface ConsensusBannerProps {
   event: EventData;
   onOpenShareModal?: () => void;
+  onOpenResultsModal?: () => void;
 }
 
 const DAYS_ORDER: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event, onOpenShareModal }) => {
+export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({
+  event,
+  onOpenShareModal,
+  onOpenResultsModal,
+}) => {
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
 
   // 1. Calculate best day
@@ -171,16 +176,26 @@ export const ConsensusBanner: React.FC<ConsensusBannerProps> = ({ event, onOpenS
             </div>
 
             {/* Lugar */}
-            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
-              <div className="flex items-center gap-1.5 text-xs text-teal-200 font-medium mb-1">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>Lugar Favorito</span>
+            <div
+              onClick={onOpenResultsModal}
+              className={`p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 transition ${
+                onOpenResultsModal ? 'cursor-pointer hover:bg-white/20 hover:scale-[1.02]' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1 text-xs text-teal-200 font-medium mb-1">
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Lugar Favorito (Ganador)</span>
+                </div>
+                {onOpenResultsModal && (
+                  <span className="text-[10px] text-amber-300 font-bold underline">Ver Likes 🏆</span>
+                )}
               </div>
               <div className="font-bold text-sm text-white truncate">
                 {topPlace ? topPlace.nombre : 'Sin lugares aún'}
               </div>
               <div className="text-[11px] text-teal-200">
-                {topPlace ? `❤️ ${topPlace.votos.length} votos` : 'Usa el buscador para agregar'}
+                {topPlace ? `❤️ ${topPlace.votos.length} likes acumulados` : 'Usa el buscador para agregar'}
               </div>
             </div>
           </div>

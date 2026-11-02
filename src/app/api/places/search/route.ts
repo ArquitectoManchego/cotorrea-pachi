@@ -3,6 +3,52 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get('q');
+  const lat = searchParams.get('lat');
+  const lng = searchParams.get('lng');
+
+  // Handle reverse geocoding when clicking on map
+  if (lat && lng) {
+    try {
+      const revUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(
+        lat
+      )}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
+
+      const res = await fetch(revUrl, {
+        headers: {
+          'User-Agent': 'CotorreaPachi/1.0 (https://cotorrea-pachi.vercel.app; info@cotorreapachi.app)',
+          'Accept-Language': 'es,en;q=0.9',
+        },
+      });
+
+      if (res.ok) {
+        const item = await res.json();
+        const parts = (item.display_name || '').split(',');
+        const shortName = parts[0]?.trim() || `Lugar en (${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)})`;
+        const address = parts.slice(1, 4).join(',').trim() || item.display_name;
+
+        return NextResponse.json([
+          {
+            name: shortName,
+            displayName: item.display_name,
+            lat: parseFloat(lat),
+            lng: parseFloat(lng),
+            address: address,
+          },
+        ]);
+      }
+    } catch (e) {
+      console.error('Error in reverse geocode:', e);
+      return NextResponse.json([
+        {
+          name: `Ubicación en (${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)})`,
+          displayName: `Coordenadas: ${lat}, ${lng}`,
+          lat: parseFloat(lat),
+          lng: parseFloat(lng),
+          address: 'Veracruz / Boca del Río',
+        },
+      ]);
+    }
+  }
 
   if (!q || q.trim().length === 0) {
     return NextResponse.json([]);

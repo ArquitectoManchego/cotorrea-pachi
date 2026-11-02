@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { PlaceOption, VERACRUZ_DEFAULT_COORDS } from '@/types';
-import { MapPin, ExternalLink, Heart, Compass } from 'lucide-react';
+import { MapPin, ExternalLink, Heart, Compass, MousePointerClick } from 'lucide-react';
 
 interface PreviewPlace {
   name: string;
@@ -17,6 +17,7 @@ interface UnifiedMapViewProps {
   onVote: (placeId: string) => void;
   focusedPlace?: PlaceOption | null;
   previewPlace?: PreviewPlace | null;
+  onSelectLocation?: (place: { name: string; lat: number; lng: number; address: string }) => void;
 }
 
 export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
@@ -25,6 +26,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   onVote,
   focusedPlace,
   previewPlace,
+  onSelectLocation,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,6 +145,34 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
 
         markersRef.current[place.id] = marker;
       });
+
+      // On map click: allow selecting location directly anywhere on the map
+      map.on('click', async (e: { latlng: { lat: number; lng: number }; originalEvent: MouseEvent }) => {
+        if (onSelectLocation) {
+          const { lat: clickLat, lng: clickLng } = e.latlng;
+          try {
+            const res = await fetch(`/api/places/search?lat=${clickLat}&lng=${clickLng}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0) {
+                onSelectLocation({
+                  name: data[0].name,
+                  lat: clickLat,
+                  lng: clickLng,
+                  address: data[0].address,
+                });
+                return;
+              }
+            }
+          } catch {}
+          onSelectLocation({
+            name: `Punto en (${clickLat.toFixed(4)}, ${clickLng.toFixed(4)})`,
+            lat: clickLat,
+            lng: clickLng,
+            address: 'Veracruz / Boca del Río',
+          });
+        }
+      });
     }
 
     initMap();
@@ -154,7 +184,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
         mapInstanceRef.current = null;
       }
     };
-  }, [places, currentParticipantId]);
+  }, [places, currentParticipantId, onSelectLocation]);
 
   // Handle focused place from card click
   useEffect(() => {
@@ -240,6 +270,11 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-xs border border-slate-200/80 text-xs font-semibold text-slate-800 pointer-events-auto">
           <MapPin className="w-4 h-4 text-teal-600" />
           <span>{placesWithCoords.length} lugares propuestos en el mapa</span>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-teal-50/95 backdrop-blur-md rounded-2xl shadow-xs border border-teal-200 text-xs font-semibold text-teal-900 pointer-events-auto">
+          <MousePointerClick className="w-3.5 h-3.5 text-teal-600" />
+          <span>Haz clic en el mapa para marcar un lugar (100% libre, sin API Key)</span>
         </div>
 
         <button

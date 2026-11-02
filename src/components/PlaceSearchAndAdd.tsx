@@ -33,6 +33,7 @@ interface PlaceSearchAndAddProps {
   onAddPlace: (place: PlaceOption) => void;
   onPreviewPlace: (place: { name: string; lat: number; lng: number; address: string } | null) => void;
   onRequireParticipant: () => void;
+  externalSelectedPlace?: { name: string; lat: number; lng: number; address: string } | null;
 }
 
 const CATEGORIES: { id: PlaceCategory; label: string; icon: React.ReactNode }[] = [
@@ -51,6 +52,7 @@ export const PlaceSearchAndAdd: React.FC<PlaceSearchAndAddProps> = ({
   onAddPlace,
   onPreviewPlace,
   onRequireParticipant,
+  externalSelectedPlace,
 }) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +62,20 @@ export const PlaceSearchAndAdd: React.FC<PlaceSearchAndAddProps> = ({
   const [description, setDescription] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync external click from map
+  useEffect(() => {
+    if (externalSelectedPlace) {
+      setSelectedPlace({
+        name: externalSelectedPlace.name,
+        displayName: externalSelectedPlace.address,
+        lat: externalSelectedPlace.lat,
+        lng: externalSelectedPlace.lng,
+        address: externalSelectedPlace.address,
+      });
+      setQuery(externalSelectedPlace.name);
+    }
+  }, [externalSelectedPlace]);
 
   // Automatic autocomplete as the user types
   useEffect(() => {
